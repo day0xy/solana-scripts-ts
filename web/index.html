@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Scripts 工具箱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 280px;
+            background: #2d3748;
+            color: white;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            text-align: center;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .nav-menu {
+            padding: 0;
+        }
+        
+        /* 主模块样式 */
+        .nav-module {
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .nav-module-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            background: #2d3748;
+        }
+        
+        .nav-module-header:hover {
+            background: #4a5568;
+        }
+        
+        .nav-module-header.active {
+            background: #667eea;
+        }
+        
+        .nav-module-icon {
+            font-size: 1.2rem;
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .nav-module-title {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .nav-module-arrow {
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+        }
+        
+        .nav-module-arrow.expanded {
+            transform: rotate(90deg);
+        }
+        
+        /* 子模块样式 */
+        .nav-submenu {
+            background: #1a202c;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .nav-submenu.expanded {
+            max-height: 300px;
+        }
+        
+        .nav-submodule {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px 12px 50px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-submodule:hover {
+            background: #2d3748;
+        }
+        
+        .nav-submodule.active {
+            background: #4a5568;
+            border-left-color: #667eea;
+        }
+        
+        .nav-submodule-icon {
+            font-size: 1rem;
+            margin-right: 10px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        .nav-submodule-title {
+            font-size: 0.9rem;
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f7fa;
+        }
+        
+        .content-header {
+            background: white;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .content-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .content-subtitle {
+            color: #718096;
+            font-size: 1rem;
+        }
+        
+        .content-body {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        .workspace {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 0.95rem;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 12px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        /* 结果显示样式 */
+        .results {
+            margin-top: 30px;
+            padding: 24px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .results h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+        
+        .wallet-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .wallet-item h4 {
+            color: #2d3748;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        
+        .wallet-field {
+            margin-bottom: 12px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .wallet-field strong {
+            color: #4a5568;
+            display: inline-block;
+            min-width: 120px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 600;
+        }
+        
+        .wallet-field-content {
+            word-break: break-all;
+            background: #f7fafc;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 4px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .copy-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .copy-btn:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+        
+        /* 工具类 */
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #718096;
+        }
+        
+        .loading h3 {
+            margin-bottom: 12px;
+            color: #4a5568;
+        }
+        
+        /* 成功提示样式 */
+        .success-banner {
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 240px;
+            }
+            
+            .content-body {
+                padding: 20px;
+            }
+            
+            .workspace {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 左侧导航栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>🚀 Solana Scripts</h1>
+                <p>区块链开发工具箱</p>
+            </div>
+            
+            <nav class="nav-menu">
+                <!-- 钱包管理模块 -->
+                <div class="nav-module">
+                    <div class="nav-module-header" onclick="toggleModule('wallet')">
+                        <span class="nav-module-icon">💰</span>
+                        <span class="nav-module-title">钱包管理</span>
+                        <span class="nav-module-arrow" id="wallet-arrow">▶</span>
+                    </div>
+                    <div class="nav-submenu" id="wallet-submenu">
+                        <div class="nav-submodule active" onclick="showSubmodule('wallet', 'batch-generate')">
+                            <span class="nav-submodule-icon">🔧</span>
+                            <span class="nav-submodule-title">批量生成钱包</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('wallet', 'import-export')">
+                            <span class="nav-submodule-icon">📤</span>
+                            <span class="nav-submodule-title">导入导出钱包</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('wallet', 'balance-check')">
+                            <span class="nav-submodule-icon">💳</span>
+                            <span class="nav-submodule-title">余额查询</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 代币管理模块 -->
+                <div class="nav-module">
+                    <div class="nav-module-header" onclick="toggleModule('token')">
+                        <span class="nav-module-icon">🪙</span>
+                        <span class="nav-module-title">代币管理</span>
+                        <span class="nav-module-arrow" id="token-arrow">▶</span>
+                    </div>
+                    <div class="nav-submenu" id="token-submenu">
+                        <div class="nav-submodule" onclick="showSubmodule('token', 'create')">
+                            <span class="nav-submodule-icon">🎯</span>
+                            <span class="nav-submodule-title">创建代币</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('token', 'transfer')">
+                            <span class="nav-submodule-icon">↗️</span>
+                            <span class="nav-submodule-title">代币转账</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('token', 'mint')">
+                            <span class="nav-submodule-icon">⚡</span>
+                            <span class="nav-submodule-title">代币铸造</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NFT管理模块 -->
+                <div class="nav-module">
+                    <div class="nav-module-header" onclick="toggleModule('nft')">
+                        <span class="nav-module-icon">🎨</span>
+                        <span class="nav-module-title">NFT 管理</span>
+                        <span class="nav-module-arrow" id="nft-arrow">▶</span>
+                    </div>
+                    <div class="nav-submenu" id="nft-submenu">
+                        <div class="nav-submodule" onclick="showSubmodule('nft', 'mint')">
+                            <span class="nav-submodule-icon">🖼️</span>
+                            <span class="nav-submodule-title">铸造 NFT</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('nft', 'transfer')">
+                            <span class="nav-submodule-icon">🔄</span>
+                            <span class="nav-submodule-title">转移 NFT</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('nft', 'metadata')">
+                            <span class="nav-submodule-icon">📝</span>
+                            <span class="nav-submodule-title">元数据管理</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 交易管理模块 -->
+                <div class="nav-module">
+                    <div class="nav-module-header" onclick="toggleModule('transaction')">
+                        <span class="nav-module-icon">📊</span>
+                        <span class="nav-module-title">交易管理</span>
+                        <span class="nav-module-arrow" id="transaction-arrow">▶</span>
+                    </div>
+                    <div class="nav-submenu" id="transaction-submenu">
+                        <div class="nav-submodule" onclick="showSubmodule('transaction', 'history')">
+                            <span class="nav-submodule-icon">📋</span>
+                            <span class="nav-submodule-title">交易历史</span>
+                        </div>
+                        <div class="nav-submodule" onclick="showSubmodule('transaction', 'batch')">
+                            <span class="nav-submodule-icon">⚡</span>
+                            <span class="nav-submodule-title">批量交易</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+        
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <div class="content-header">
+                <h1 class="content-title" id="content-title">批量生成钱包</h1>
+                <p class="content-subtitle" id="content-subtitle">快速批量生成 Solana 钱包，支持多种生成模式</p>
+            </div>
+            
+            <div class="content-body">
+                <!-- 批量生成钱包工作区 -->
+                <div id="wallet-batch-generate-workspace" class="workspace">
+                    <div class="form-group">
+                        <label class="form-label">生成类型</label>
+                        <select class="form-select" id="walletType">
+                            <option value="random">随机钱包（无助记词）</option>
+                            <option value="mnemonic">从单个助记词生成多个钱包</option>
+                            <option value="unique">每个钱包独立助记词</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">生成数量</label>
+                        <input type="number" class="form-input" id="walletCount" value="3" min="1" max="20">
+                    </div>
+                    
+                    <div class="form-group hidden" id="mnemonicGroup">
+                        <label class="form-label">助记词（可选，留空自动生成）</label>
+                        <input type="text" class="form-input" id="customMnemonic" placeholder="输入12个单词的助记词，用空格分隔">
+                    </div>
+                    
+                    <div style="margin-bottom: 24px;">
+                        <button class="btn" onclick="generateWallets()">
+                            🔧 生成钱包
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearResults()">
+                            🗑️ 清空结果
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportResults()">
+                            💾 导出结果
+                        </button>
+                    </div>
+                    
+                    <div id="results" class="hidden">
+                        <h3>📊 生成结果</h3>
+                        <div id="walletResults"></div>
+                    </div>
+                </div>
+                
+                <!-- 其他子模块工作区（暂时隐藏） -->
+                <div id="wallet-import-export-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>📤 导入导出钱包</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <div id="wallet-balance-check-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>💳 余额查询</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <!-- 代币管理工作区 -->
+                <div id="token-create-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>🎯 创建代币</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <div id="token-transfer-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>↗️ 代币转账</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <div id="token-mint-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>⚡ 代币铸造</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <!-- NFT管理工作区 -->
+                <div id="nft-mint-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>🖼️ 铸造 NFT</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <div id="nft-transfer-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>🔄 转移 NFT</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <div id="nft-metadata-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>📝 元数据管理</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <!-- 交易管理工作区 -->
+                <div id="transaction-history-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>📋 交易历史</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+                
+                <div id="transaction-batch-workspace" class="workspace hidden">
+                    <div class="loading">
+                        <h3>⚡ 批量交易</h3>
+                        <p>此功能正在开发中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
