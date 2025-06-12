@@ -1,18 +1,19 @@
-import { PublicKey, Connection } from "@solana/web3.js";
+import { PublicKey, Connection, Keypair } from "@solana/web3.js";
+import bs58 from "bs58";
 
 // 在Node.js环境中加载环境变量
-if (typeof window === 'undefined' && typeof process !== 'undefined') {
+if (typeof window === "undefined" && typeof process !== "undefined") {
   try {
-    require('dotenv').config();
+    require("dotenv").config();
   } catch (error) {
     // dotenv不可用时静默失败
   }
 }
 
 // 创建connection - 兼容浏览器和Node.js环境
-const helius_api_key = 
-  typeof window !== 'undefined' 
-    ? (import.meta.env?.VITE_HELIUS_API_KEY) // 浏览器环境使用Vite环境变量
+const helius_api_key =
+  typeof window !== "undefined"
+    ? import.meta.env?.VITE_HELIUS_API_KEY // 浏览器环境使用Vite环境变量
     : process.env.HELIUS_API_KEY || process.env.VITE_HELIUS_API_KEY; // Node.js环境使用process.env
 
 const rpcUrl = helius_api_key
@@ -65,5 +66,70 @@ export function isValidSolanaAddress(address: string): {
         error instanceof Error ? error.message : "Unknown error"
       }`,
     };
+  }
+}
+
+//通过私钥导入钱包
+export function importWallet(walletPrivateKey: string): Keypair {
+  const privateKeyBytes = bs58.decode(walletPrivateKey);
+
+  const keypair = Keypair.fromSecretKey(privateKeyBytes);
+
+  return keypair;
+}
+
+export function batchImportWallet(walletPrivateKeys: string[]): Keypair[] {
+  const keypairs: Keypair[] = [];
+
+  for (let i = 0; i < walletPrivateKeys.length; i++) {
+    try {
+      const privateKey = walletPrivateKeys[i].trim();
+
+      if (!privateKey) {
+        console.log(`⚠️ 钱包 ${i + 1}: 私钥为空，跳过`);
+        continue;
+      }
+
+      // 验证私钥格式
+      const validationResult = validatePrivateKey(privateKey);
+      if (!validationResult.isValid) {
+        console.log(`❌ 钱包 ${i + 1}: ${validationResult.error}`);
+        continue;
+      }
+
+      const keypair = importWallet(privateKey);
+      keypairs.push(keypair);
+      console.log(`✅ 钱包 ${i + 1} 导入成功: ${keypair.publicKey.toBase58()}`);
+    } catch (error) {
+      console.error(`❌ 钱包 ${i + 1} 导入失败:`, error.message);
+    }
+  }
+  return keypairs;
+}
+
+// 验证私钥格式的辅助函数
+export function validatePrivateKey(privateKey: string): {
+  isValid: boolean;
+  error?: string;
+} {
+  try {
+    if (!privateKey || privateKey.length === 0) {
+      return { isValid: false, error: "私钥不能为空" };
+    }
+
+    // 检查是否为有效的Base58格式
+    const decoded = bs58.decode(privateKey);
+
+    // Solana私钥应该是64字节
+    if (decoded.length !== 64) {
+      return {
+        isValid: false,
+        error: `私钥长度不正确，期望64字节，实际${decoded.length}字节`,
+      };
+    }
+
+    return { isValid: true };
+  } catch (error) {
+    return { isValid: false, error: "私钥格式无效，请确保是有效的Base58编码" };
   }
 }
