@@ -1,10 +1,8 @@
 import {
-  Connection,
-  Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
-import { isValidSolanaAddress, connection } from "../辅助功能/1.辅助功能";
+import { isValidSolanaAddress, connection } from "../辅助功能/1.辅助功能.ts";
 
 export async function getWalletBalance(wallet: string): Promise<number> {
   //做一个地址检查
@@ -86,11 +84,4 @@ async function main() {
   }
 }
 
-// 仅在 Node.js 环境中运行主函数
-if (
-  typeof require !== "undefined" &&
-  typeof module !== "undefined" &&
-  require.main === module
-) {
-  main().catch(console.error);
-}
+main().catch(console.error);

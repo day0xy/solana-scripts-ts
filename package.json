@@ -1,6 +1,7 @@
 {
   "name": "solana-scripts-ts",
   "version": "1.0.0",
+  "type": "module",
   "description": "Solana scripts written in TypeScript",
   "scripts": {
     "build": "tsc",
@@ -15,6 +16,7 @@
     "bip39": "^3.1.0",
     "bs58": "^6.0.0",
     "buffer": "^6.0.3",
+    "dotenv": "^16.5.0",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5"
   },

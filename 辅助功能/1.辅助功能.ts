@@ -1,7 +1,19 @@
 import { PublicKey, Connection } from "@solana/web3.js";
 
-// 创建connection
-const helius_api_key = import.meta.env.VITE_HELIUS_API_KEY;
+// 在Node.js环境中加载环境变量
+if (typeof window === 'undefined' && typeof process !== 'undefined') {
+  try {
+    require('dotenv').config();
+  } catch (error) {
+    // dotenv不可用时静默失败
+  }
+}
+
+// 创建connection - 兼容浏览器和Node.js环境
+const helius_api_key = 
+  typeof window !== 'undefined' 
+    ? (import.meta.env?.VITE_HELIUS_API_KEY) // 浏览器环境使用Vite环境变量
+    : process.env.HELIUS_API_KEY || process.env.VITE_HELIUS_API_KEY; // Node.js环境使用process.env
 
 const rpcUrl = helius_api_key
   ? `https://mainnet.helius-rpc.com/?api-key=${helius_api_key}`

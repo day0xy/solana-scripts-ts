@@ -170,13 +170,6 @@ async function main() {
   console.log("\n🎉 所有示例执行完成！");
 }
 
-// 如果直接运行此文件，则执行主函数（仅在 Node.js 环境中）
-if (
-  typeof require !== "undefined" &&
-  typeof module !== "undefined" &&
-  require.main === module
-) {
-  main();
-}
+main();
 
 export {};
