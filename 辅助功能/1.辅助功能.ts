@@ -1,4 +1,13 @@
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Connection } from "@solana/web3.js";
+
+// 创建connection
+const helius_api_key = import.meta.env.VITE_HELIUS_API_KEY;
+
+const rpcUrl = helius_api_key
+  ? `https://mainnet.helius-rpc.com/?api-key=${helius_api_key}`
+  : "https://api.mainnet-beta.solana.com";
+
+export const connection = new Connection(rpcUrl, "confirmed");
 
 /**
  * 检查给定的字符串是否为有效的Solana地址（公钥）

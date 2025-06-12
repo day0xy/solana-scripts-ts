@@ -4,16 +4,7 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
 } from "@solana/web3.js";
-import { isValidSolanaAddress } from "../辅助功能/1.辅助功能";
-
-// 创建connection - 在浏览器环境中使用默认RPC
-const helius_api_key = process.env.HELIUS_API_KEY;
-// const rpcUrl = helius_api_key
-//   ? `https://mainnet.helius-rpc.com/?api-key=${helius_api_key}`
-//   : "https://api.mainnet-beta.solana.com";
-
-const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${helius_api_key}`;
-const connection = new Connection(rpcUrl, "confirmed");
+import { isValidSolanaAddress, connection } from "../辅助功能/1.辅助功能";
 
 export async function getWalletBalance(wallet: string): Promise<number> {
   //做一个地址检查

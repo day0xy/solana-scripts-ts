@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite'
+import { resolve } from 'path'
 
 export default defineConfig({
   root: './web',
+  envDir: '../', // 指定 .env 文件在上级目录
   build: {
     outDir: '../dist-web',
     emptyOutDir: true,
