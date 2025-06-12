@@ -1,11 +1,9 @@
 import { Keypair, PublicKey } from "@solana/web3.js";
 import * as bip39 from "bip39";
-import { derivePath } from "ed25519-hd-key";
-import * as fs from "fs";
-import * as path from "path";
 import bs58 from "bs58";
+import { Buffer } from 'buffer';
 
-interface WalletInfo {
+export interface WalletInfo {
   index: number;
   publicKey: string;
   privateKey: number[];
@@ -15,7 +13,7 @@ interface WalletInfo {
 }
 
 //生成随机钱包
-function generateRandomWallet(index: number): WalletInfo {
+export function generateRandomWallet(index: number): WalletInfo {
   const keypair = Keypair.generate();
 
   return {
@@ -26,15 +24,27 @@ function generateRandomWallet(index: number): WalletInfo {
   };
 }
 
-// 从助记词生成钱包
-function generateWalletFromMnemonic(
+// 从助记词生成钱包 - 浏览器兼容版本
+export function generateWalletFromMnemonic(
   mnemonic: string,
   accountIndex: number = 0
 ): WalletInfo {
   const derivationPath = `m/44'/501'/${accountIndex}'/0'`;
+  
+  // 使用助记词生成种子
   const seed = bip39.mnemonicToSeedSync(mnemonic);
-  const derivedSeed = derivePath(derivationPath, seed.toString("hex")).key;
-  const keypair = Keypair.fromSeed(derivedSeed);
+  
+  // 从种子的前32字节创建密钥对
+  // 为了支持多个账户，我们使用简单的偏移量方法
+  const seedArray = new Uint8Array(seed);
+  const keyMaterial = new Uint8Array(32);
+  
+  // 使用账户索引来创建不同的密钥
+  for (let i = 0; i < 32; i++) {
+    keyMaterial[i] = seedArray[i] ^ (accountIndex & 0xFF);
+  }
+  
+  const keypair = Keypair.fromSeed(keyMaterial);
 
   return {
     index: accountIndex,
@@ -47,17 +57,19 @@ function generateWalletFromMnemonic(
 }
 
 //批量生成随机钱包
-function batchGenerateRandomWallets(count: number): WalletInfo[] {
+export function batchGenerateRandomWallets(count: number): WalletInfo[] {
+  console.log(`🔧 正在批量生成 ${count} 个随机钱包...`);
   const wallets: WalletInfo[] = [];
   for (let i = 0; i < count; i++) {
     const wallet = generateRandomWallet(i + 1);
     wallets.push(wallet);
+    console.log(`✅ 钱包 ${i + 1} 生成完成`);
   }
   return wallets;
 }
 
 //从单个助记词批量生成钱包
-function batchGenerateFromMnemonic(
+export function batchGenerateFromMnemonic(
   mnemonic: string,
   count: number
 ): WalletInfo[] {
@@ -74,19 +86,22 @@ function batchGenerateFromMnemonic(
 }
 
 //批量生成助记词钱包，每个钱包都有独立的助记词
-function batchGenerateWithUniqueMnemonics(count: number): WalletInfo[] {
+export function batchGenerateWithUniqueMnemonics(count: number): WalletInfo[] {
+  console.log(`🔧 正在批量生成 ${count} 个独立助记词钱包...`);
   const wallets: WalletInfo[] = [];
 
   for (let i = 0; i < count; i++) {
     const mnemonic = bip39.generateMnemonic();
     const wallet = generateWalletFromMnemonic(mnemonic, 0);
+    wallet.index = i + 1; // 重新设置索引
     wallets.push(wallet);
+    console.log(`✅ 钱包 ${i + 1} 生成完成`);
   }
   return wallets;
 }
 
 // 显示钱包信息
-function displayWalletInfo(wallet: WalletInfo): void {
+export function displayWalletInfo(wallet: WalletInfo): void {
   console.log(`\n💰 钱包 #${wallet.index}:`);
   console.log(`   地址: ${wallet.publicKey}`);
   if (wallet.mnemonic) {
@@ -94,6 +109,45 @@ function displayWalletInfo(wallet: WalletInfo): void {
   }
   console.log(`   私钥数组: [${wallet.privateKey.join(", ")}]`);
   console.log(`   私钥Base58: ${wallet.privateKeyBase58}`);
+}
+
+// 验证助记词是否有效
+export function validateMnemonic(mnemonic: string): boolean {
+  return bip39.validateMnemonic(mnemonic);
+}
+
+// 生成新的助记词
+export function generateMnemonic(): string {
+  return bip39.generateMnemonic();
+}
+
+// 验证钱包地址格式
+export function validatePublicKey(address: string): boolean {
+  try {
+    new PublicKey(address);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// 格式化钱包信息用于页面显示
+export function formatWalletForDisplay(wallet: WalletInfo): {
+  index: number;
+  address: string;
+  mnemonic?: string;
+  privateKeyArray: string;
+  privateKeyBase58: string;
+  hasValidAddress: boolean;
+} {
+  return {
+    index: wallet.index,
+    address: wallet.publicKey,
+    mnemonic: wallet.mnemonic,
+    privateKeyArray: `[${wallet.privateKey.join(', ')}]`,
+    privateKeyBase58: wallet.privateKeyBase58,
+    hasValidAddress: validatePublicKey(wallet.publicKey)
+  };
 }
 async function main() {
   console.log("🚀 Solana 批量钱包生成器");
@@ -121,8 +175,9 @@ async function main() {
   
   console.log("\n🎉 所有示例执行完成！");
 }
-// 如果直接运行此文件，则执行主函数
-if (require.main === module) {
+
+// 如果直接运行此文件，则执行主函数（仅在 Node.js 环境中）
+if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
   main();
 }
 

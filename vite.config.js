@@ -15,13 +15,14 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      buffer: 'buffer',
-      crypto: 'crypto-browserify',
-      stream: 'stream-browserify',
-      util: 'util'
+      // 添加路径别名，让前端可以访问钱包管理文件夹
+      '@wallet': '/钱包管理'
     }
   },
   optimizeDeps: {
-    include: ['buffer', 'crypto-browserify', 'stream-browserify', 'util']
+    include: ['buffer', '@solana/web3.js', 'bip39', 'bs58']
+  },
+  esbuild: {
+    target: 'esnext'
   }
 })
