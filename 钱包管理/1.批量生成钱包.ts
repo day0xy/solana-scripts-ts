@@ -1,7 +1,7 @@
 import { Keypair, PublicKey } from "@solana/web3.js";
 import * as bip39 from "bip39";
 import bs58 from "bs58";
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 
 export interface WalletInfo {
   index: number;
@@ -20,30 +20,24 @@ export function generateRandomWallet(index: number): WalletInfo {
     index,
     publicKey: keypair.publicKey.toBase58(),
     privateKey: Array.from(keypair.secretKey),
-    privateKeyBase58: bs58.encode(Buffer.from(keypair.secretKey))
+    privateKeyBase58: bs58.encode(Buffer.from(keypair.secretKey)),
   };
 }
 
-// 从助记词生成钱包 - 浏览器兼容版本
+// 从助记词生成钱包
 export function generateWalletFromMnemonic(
   mnemonic: string,
   accountIndex: number = 0
 ): WalletInfo {
   const derivationPath = `m/44'/501'/${accountIndex}'/0'`;
-  
-  // 使用助记词生成种子
-  const seed = bip39.mnemonicToSeedSync(mnemonic);
-  
-  // 从种子的前32字节创建密钥对
-  // 为了支持多个账户，我们使用简单的偏移量方法
-  const seedArray = new Uint8Array(seed);
+  const seed = bip39.mnemonicToSeedSync(mnemonic); // 使用助记词生成种子
+  const seedArray = new Uint8Array(seed); // 从种子的前32字节创建密钥对
   const keyMaterial = new Uint8Array(32);
-  
-  // 使用账户索引来创建不同的密钥
+
   for (let i = 0; i < 32; i++) {
-    keyMaterial[i] = seedArray[i] ^ (accountIndex & 0xFF);
+    keyMaterial[i] = seedArray[i] ^ (accountIndex & 0xff);
   }
-  
+
   const keypair = Keypair.fromSeed(keyMaterial);
 
   return {
@@ -144,21 +138,21 @@ export function formatWalletForDisplay(wallet: WalletInfo): {
     index: wallet.index,
     address: wallet.publicKey,
     mnemonic: wallet.mnemonic,
-    privateKeyArray: `[${wallet.privateKey.join(', ')}]`,
+    privateKeyArray: `[${wallet.privateKey.join(", ")}]`,
     privateKeyBase58: wallet.privateKeyBase58,
-    hasValidAddress: validatePublicKey(wallet.publicKey)
+    hasValidAddress: validatePublicKey(wallet.publicKey),
   };
 }
 async function main() {
   console.log("🚀 Solana 批量钱包生成器");
   console.log("═".repeat(50));
-  
+
   // 示例1: 生成3个随机钱包
   console.log("\n📝 示例1: 批量生成3个随机钱包");
   let count = 3;
   const randomWallets = batchGenerateRandomWallets(count);
   randomWallets.forEach((wallet) => displayWalletInfo(wallet));
-  
+
   // 示例2: 从单个助记词生成多个钱包
   console.log("\n" + "═".repeat(50));
   console.log("\n📝 示例2: 从单个助记词生成3个钱包");
@@ -166,18 +160,22 @@ async function main() {
   console.log(`使用助记词: ${testMnemonic}`);
   const mnemonicWallets = batchGenerateFromMnemonic(testMnemonic, 3);
   mnemonicWallets.forEach((wallet) => displayWalletInfo(wallet));
-  
+
   // 示例3: 生成带独立助记词的钱包
   console.log("\n" + "═".repeat(50));
   console.log("\n📝 示例3: 生成2个带独立助记词的钱包");
   const uniqueWallets = batchGenerateWithUniqueMnemonics(2);
   uniqueWallets.forEach((wallet) => displayWalletInfo(wallet));
-  
+
   console.log("\n🎉 所有示例执行完成！");
 }
 
 // 如果直接运行此文件，则执行主函数（仅在 Node.js 环境中）
-if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
+if (
+  typeof require !== "undefined" &&
+  typeof module !== "undefined" &&
+  require.main === module
+) {
   main();
 }
 
