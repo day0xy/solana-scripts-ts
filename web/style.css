@@ -199,35 +199,62 @@
             box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
         }
         
-        .wallet-status {
+        /* 钱包连接组件样式 */
+        #wallet-connection-widget {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px 16px;
+        }
+        
+        .wallet-connect-btn.connected {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+        
+        .wallet-connect-btn.connected:hover {
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+        
+        .wallet-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
             background: #f7fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 0.85rem;
-            color: #4a5568;
-            max-width: 280px;
+        }
+        
+        .wallet-status.hidden {
+            display: none !important;
         }
         
         .wallet-address {
             font-family: 'Courier New', monospace;
             font-weight: 500;
             color: #2d3748;
-            flex: 1;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
         .connection-status {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #48bb78;
-            flex-shrink: 0;
+        }
+        
+        .wallet-disconnect-btn {
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .wallet-disconnect-btn:hover {
+            background: #cbd5e0;
         }
         
         /* 响应式设计 */

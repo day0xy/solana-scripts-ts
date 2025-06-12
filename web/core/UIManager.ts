@@ -41,10 +41,6 @@ export const moduleConfig: Record<string, Record<string, ModuleConfig>> = {
             title: '批量生成钱包',
             subtitle: '快速批量生成 Solana 钱包，支持多种生成模式'
         },
-        'import-export': {
-            title: '导入导出钱包',
-            subtitle: '导入现有钱包或导出钱包信息'
-        },
         'balance-check': {
             title: '余额查询',
             subtitle: '查询钱包的 SOL 和代币余额'
@@ -62,30 +58,6 @@ export const moduleConfig: Record<string, Record<string, ModuleConfig>> = {
         'mint': {
             title: '代币铸造',
             subtitle: '为现有代币铸造新的供应量'
-        }
-    },
-    'nft': {
-        'mint': {
-            title: '铸造 NFT',
-            subtitle: '创建和铸造 Solana NFT'
-        },
-        'transfer': {
-            title: '转移 NFT',
-            subtitle: '将 NFT 转移到其他钱包'
-        },
-        'metadata': {
-            title: '元数据管理',
-            subtitle: '管理 NFT 的元数据信息'
-        }
-    },
-    'transaction': {
-        'history': {
-            title: '交易历史',
-            subtitle: '查看钱包的交易记录'
-        },
-        'batch': {
-            title: '批量交易',
-            subtitle: '执行批量转账操作'
         }
     }
 };
@@ -213,8 +185,6 @@ export class UIManager {
     private getModuleTitle(moduleId: string): string {
         if (moduleId === 'wallet') return '钱包管理';
         if (moduleId === 'token') return '代币工具';
-        if (moduleId === 'nft') return 'NFT 工具';
-        if (moduleId === 'transaction') return '交易工具';
         return moduleId.charAt(0).toUpperCase() + moduleId.slice(1);
     }
 

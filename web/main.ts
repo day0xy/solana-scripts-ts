@@ -14,6 +14,7 @@ import './walletConnection';
 import { uiManager } from './core/UIManager';
 import { walletGenerator } from './modules/WalletGenerator';
 import { balanceChecker } from './modules/BalanceChecker';
+import walletConnection from './walletConnection';
 
 // 全局函数类型声明
 declare global {
@@ -38,6 +39,7 @@ declare global {
 (window as any).uiManager = uiManager;
 (window as any).walletGenerator = walletGenerator;
 (window as any).balanceChecker = balanceChecker;
+(window as any).walletConnection = walletConnection;
 
 // 挂载常用函数到全局，保持向后兼容
 (window as any).copyToClipboard = (elementId: string) => uiManager.copyToClipboard(elementId);
@@ -82,6 +84,22 @@ class App {
             });
         }
 
+        // 钱包连接按钮监听
+        const walletConnectBtn = document.getElementById('wallet-connect-btn');
+        if (walletConnectBtn) {
+            walletConnectBtn.addEventListener('click', async () => {
+                await walletConnection.connect();
+            });
+        }
+
+        // 钱包断开按钮监听
+        const walletDisconnectBtn = document.getElementById('wallet-disconnect-btn');
+        if (walletDisconnectBtn) {
+            walletDisconnectBtn.addEventListener('click', async () => {
+                await walletConnection.disconnect();
+            });
+        }
+
         console.log('🔧 DOM事件监听器已设置');
     }
 
@@ -91,6 +109,8 @@ class App {
         // Dynamically generate the navigation menu and workspaces
         uiManager.generateNavigationMenu();
         uiManager.generateWorkspaces();
+
+        // 钱包连接会在其构造函数中自动初始化，这里不需要手动调用
 
         // Set the initial active module and submodule
         // Ensure this is called after dynamic generation

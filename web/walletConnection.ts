@@ -195,22 +195,30 @@ class WalletConnection {
     private updateUI() {
         const connectBtn = document.getElementById('wallet-connect-btn') as HTMLButtonElement;
         const walletStatus = document.getElementById('wallet-status') as HTMLElement;
-        const connectedAddress = document.getElementById('connected-address') as HTMLElement;
-        const btnText = document.getElementById('wallet-btn-text') as HTMLElement;
+        const walletAddress = document.getElementById('wallet-address') as HTMLElement;
+
+        if (!connectBtn || !walletStatus || !walletAddress) {
+            console.log('钱包UI元素未找到，可能页面还未加载完成');
+            return;
+        }
 
         if (this.state.connected && this.state.address) {
             // 连接状态
-            connectBtn.className = 'wallet-connect-btn wallet-disconnect-btn';
-            connectBtn.innerHTML = '<span>🔌</span><span>断开连接</span>';
+            connectBtn.innerHTML = '🔌 已连接';
+            connectBtn.classList.add('connected');
             
-            walletStatus.style.display = 'flex';
-            connectedAddress.textContent = this.formatAddress(this.state.address);
+            walletStatus.classList.remove('hidden');
+            walletAddress.textContent = this.formatAddress(this.state.address);
+            
+            // 加载余额
+            this.loadWalletBalance();
         } else {
             // 未连接状态
-            connectBtn.className = 'wallet-connect-btn';
-            connectBtn.innerHTML = '<span>🔗</span><span>连接钱包</span>';
+            connectBtn.innerHTML = '🔗 连接钱包';
+            connectBtn.classList.remove('connected');
             
-            walletStatus.style.display = 'none';
+            walletStatus.classList.add('hidden');
+            walletAddress.textContent = '未连接';
         }
     }
 

@@ -20,8 +20,23 @@
         <main class="main-content">
             <!-- 内容头部 -->
             <div class="content-header">
-                <h1 id="content-title">欢迎</h1>
-                <p id="content-subtitle">请从左侧菜单选择一个功能开始。</p>
+                <div class="header-left">
+                    <h1 id="content-title">欢迎</h1>
+                    <p id="content-subtitle">请从左侧菜单选择一个功能开始。</p>
+                </div>
+                <div class="header-right">
+                    <!-- 钱包连接组件 -->
+                    <div id="wallet-connection-widget">
+                        <button id="wallet-connect-btn" class="wallet-connect-btn">
+                            🔗 连接钱包
+                        </button>
+                        <div id="wallet-status" class="wallet-status hidden">
+                            <div class="wallet-address" id="wallet-address">未连接</div>
+                            <div class="connection-status"></div>
+                            <button id="wallet-disconnect-btn" class="wallet-disconnect-btn">断开</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- 内容主体 -->
@@ -32,10 +47,9 @@
                     <p>您可以：</p>
                     <ul>
                         <li>批量生成钱包</li>
-                        <li>查询钱包余额</li>
+                        <li>查询钱包余额和代币余额</li>
                         <li>创建和管理 SPL 代币</li>
-                        <li>铸造和转移 NFT</li>
-                        <li>查看交易历史</li>
+                        <li>进行代币转账和铸造</li>
                     </ul>
                     <p>请通过左侧的导航菜单选择您需要的功能模块和具体操作。</p>
                 </div>
