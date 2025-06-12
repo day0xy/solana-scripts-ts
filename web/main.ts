@@ -5,6 +5,9 @@ import { Buffer } from 'buffer';
 (window as any).Buffer = Buffer;
 (globalThis as any).Buffer = Buffer;
 
+// 导入钱包连接模块
+import './walletConnection';
+
 // 直接导入钱包管理文件夹中的TypeScript函数
 import { 
     type WalletInfo,
