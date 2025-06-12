@@ -1,5 +1,6 @@
 // 钱包连接模块 - 处理浏览器钱包连接功能
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { uiManager } from './core/UIManager';
 
 // 钱包连接状态
 interface WalletState {
@@ -99,7 +100,7 @@ class WalletConnection {
             return false;
         } catch (error) {
             console.error('钱包连接失败:', error);
-            this.showErrorMessage(error.message || '钱包连接失败');
+            uiManager.handleError(error, '钱包连接');
             return false;
         }
     }
@@ -236,12 +237,6 @@ class WalletConnection {
     private formatAddress(address: string): string {
         if (address.length <= 16) return address;
         return `${address.slice(0, 4)}...${address.slice(-4)}`;
-    }
-
-    // 显示错误消息
-    private showErrorMessage(message: string) {
-        // 简单的错误提示，可以根据需要改进
-        alert(`钱包连接错误: ${message}`);
     }
 
     // 获取当前状态
