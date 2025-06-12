@@ -1,5 +1,21 @@
 {
+  "name": "solana-scripts-ts",
+  "version": "1.0.0",
+  "description": "Solana scripts written in TypeScript",
+  "scripts": {
+    "build": "tsc",
+    "start:wallet": "ts-node 钱包管理/1.批量生成钱包.ts",
+    "dev": "ts-node 钱包管理/1.批量生成钱包.ts"
+  },
   "dependencies": {
-    "@solana/web3.js": "^1.98.2"
+    "@solana/web3.js": "^1.98.2",
+    "bip39": "^3.1.0",
+    "ed25519-hd-key": "^1.3.0",
+    "bs58": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
   }
 }
