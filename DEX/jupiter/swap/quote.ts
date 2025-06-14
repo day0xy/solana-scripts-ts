@@ -1,28 +1,9 @@
 import axios from "axios";
-
-// 常见代币信息
-const TOKEN_INFO = {
-  // SOL
-  So11111111111111111111111111111111111111112: { symbol: "SOL", decimals: 9 },
-  // USDC
-  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: "USDC", decimals: 6 },
-  // USDT
-  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: { symbol: "USDT", decimals: 6 },
-};
-
-// 精度转换工具函数
-export function toTokenAmount(humanAmount: number, decimals: number): number {
-  return Math.floor(humanAmount * Math.pow(10, decimals));
-}
-
-export function fromTokenAmount(rawAmount: number, decimals: number): number {
-  return rawAmount / Math.pow(10, decimals);
-}
-
-// 获取代币信息
-export function getTokenInfo(mint: string) {
-  return TOKEN_INFO[mint] || { symbol: "Unknown", decimals: 9 }; // 默认精度9
-}
+import {
+  isValidSolanaAddress,
+  connection,
+  getTokenInfo,
+} from "../../../辅助功能/1.辅助功能.ts";
 
 // 查询报价参数接口 - 完整版本
 export interface QuoteParams {
@@ -45,21 +26,22 @@ export interface QuoteParams {
 }
 
 // 构建查询参数字符串
-export function buildQueryParams(params: QuoteParams): string {
+export async function buildQueryParams(params: QuoteParams): Promise<string> {
   const queryParams = new URLSearchParams();
+
+  // 获取输入代币精度并计算原始金额
+  const inputMintDecimals = (await getTokenInfo(params.inputMint)).decimals;
+  const inputMintAmount = params.amount * Math.pow(10, inputMintDecimals);
 
   // 必需参数
   queryParams.append("inputMint", params.inputMint);
   queryParams.append("outputMint", params.outputMint);
-  queryParams.append("amount", params.amount.toString());
+  queryParams.append("amount", inputMintAmount.toString());
+  queryParams.append("swapMode", params.swapMode || "ExactIn");
 
   // 可选参数
   if (params.slippageBps !== undefined) {
     queryParams.append("slippageBps", params.slippageBps.toString());
-  }
-
-  if (params.swapMode) {
-    queryParams.append("swapMode", params.swapMode);
   }
 
   if (params.dexes && params.dexes.length > 0) {
@@ -105,7 +87,7 @@ export function buildQueryParams(params: QuoteParams): string {
 
 // Jupiter API 查询报价函数
 export async function getSwapQuote(params: QuoteParams): Promise<any> {
-  const queryString = buildQueryParams(params);
+  const queryString = await buildQueryParams(params);
 
   const config = {
     method: "get",
@@ -125,13 +107,13 @@ export async function getSwapQuote(params: QuoteParams): Promise<any> {
   }
 }
 
-// 示例使用
 async function main() {
-  // 高级示例 - 使用更多参数
+  const inputMint = "So11111111111111111111111111111111111111112";
+  const outputMint = "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN";
   const advancedParams: QuoteParams = {
-    inputMint: "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
-    outputMint: "So11111111111111111111111111111111111111112",
-    amount: 145,
+    inputMint: inputMint,
+    outputMint: outputMint,
+    amount: 1,
     slippageBps: 50, // 0.5% 滑点
     swapMode: "ExactIn", // 精确输入模式
     onlyDirectRoutes: false, // 允许多跳路由
@@ -140,9 +122,14 @@ async function main() {
   };
 
   try {
-    console.log("\n高级查询...");
     const advancedQuote = await getSwapQuote(advancedParams);
-    console.log("高级报价:", JSON.stringify(advancedQuote, null, 2));
+
+    const outputMintDecimals = (await getTokenInfo(outputMint)).decimals;
+    const outAmount =
+      advancedQuote.outAmount / Math.pow(10, outputMintDecimals);
+    console.log(`outAmount: ${outAmount}`);
+
+    console.log(JSON.stringify(advancedQuote, null, 2));
   } catch (error) {
     console.error("查询失败:", error);
   }

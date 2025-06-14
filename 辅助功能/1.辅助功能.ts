@@ -172,4 +172,3 @@ async function main() {
   const tokenInfo = await getTokenInfo(mint);
   console.log(tokenInfo.decimals);
 }
-main().catch(console.error);
