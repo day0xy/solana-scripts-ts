@@ -1,3 +1,5 @@
+//这里固定swapMode模式为exactIn
+
 import axios from "axios";
 import {
   isValidSolanaAddress,
@@ -128,6 +130,11 @@ async function main() {
     const outAmount =
       advancedQuote.outAmount / Math.pow(10, outputMintDecimals);
     console.log(`outAmount: ${outAmount}`);
+
+    //这个是考虑了滑点之后的最小输出值
+    const otherAmountThreshold =
+      advancedQuote.otherAmountThreshold / Math.pow(10, outputMintDecimals);
+    console.log(`otherAmountThreshold: ${otherAmountThreshold}`);
 
     console.log(JSON.stringify(advancedQuote, null, 2));
   } catch (error) {
