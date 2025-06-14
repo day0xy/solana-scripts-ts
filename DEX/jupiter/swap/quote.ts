@@ -94,7 +94,8 @@ export async function getSwapQuote(params: QuoteParams): Promise<any> {
   const config = {
     method: "get",
     maxBodyLength: Infinity,
-    url: `https://quote-api.jup.ag/v6/quote?${queryString}`,
+    // url: `https://quote-api.jup.ag/v6/quote?${queryString}`,
+    url: `https://lite-api.jup.ag/swap/v1/quote?${queryString}`,
     headers: {
       Accept: "application/json",
     },
