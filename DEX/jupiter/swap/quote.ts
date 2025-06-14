@@ -1,5 +1,29 @@
 import axios from "axios";
 
+// 常见代币信息
+const TOKEN_INFO = {
+  // SOL
+  So11111111111111111111111111111111111111112: { symbol: "SOL", decimals: 9 },
+  // USDC
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: "USDC", decimals: 6 },
+  // USDT
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: { symbol: "USDT", decimals: 6 },
+};
+
+// 精度转换工具函数
+export function toTokenAmount(humanAmount: number, decimals: number): number {
+  return Math.floor(humanAmount * Math.pow(10, decimals));
+}
+
+export function fromTokenAmount(rawAmount: number, decimals: number): number {
+  return rawAmount / Math.pow(10, decimals);
+}
+
+// 获取代币信息
+export function getTokenInfo(mint: string) {
+  return TOKEN_INFO[mint] || { symbol: "Unknown", decimals: 9 }; // 默认精度9
+}
+
 // 查询报价参数接口 - 完整版本
 export interface QuoteParams {
   // 必需参数
@@ -103,18 +127,11 @@ export async function getSwapQuote(params: QuoteParams): Promise<any> {
 
 // 示例使用
 async function main() {
-  // 基础示例 - 只使用必需参数
-  const basicParams: QuoteParams = {
-    inputMint: "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN", 
-    outputMint: "So11111111111111111111111111111111111111112", 
-    amount: 1000, // 1 SOL 
-  };
-
   // 高级示例 - 使用更多参数
   const advancedParams: QuoteParams = {
-    inputMint: "So11111111111111111111111111111111111111112", 
-    outputMint: "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN", 
-    amount: 1000,
+    inputMint: "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
+    outputMint: "So11111111111111111111111111111111111111112",
+    amount: 145,
     slippageBps: 50, // 0.5% 滑点
     swapMode: "ExactIn", // 精确输入模式
     onlyDirectRoutes: false, // 允许多跳路由
@@ -123,13 +140,9 @@ async function main() {
   };
 
   try {
-    console.log("基础查询...");
-    const basicQuote = await getSwapQuote(basicParams);
-    console.log("基础报价:", JSON.stringify(basicQuote, null, 2));
-
-    // console.log("\n高级查询...");
-    // const advancedQuote = await getSwapQuote(advancedParams);
-    // console.log("高级报价:", JSON.stringify(advancedQuote, null, 2));
+    console.log("\n高级查询...");
+    const advancedQuote = await getSwapQuote(advancedParams);
+    console.log("高级报价:", JSON.stringify(advancedQuote, null, 2));
   } catch (error) {
     console.error("查询失败:", error);
   }

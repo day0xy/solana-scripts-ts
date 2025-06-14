@@ -1,4 +1,5 @@
 import { PublicKey, Connection, Keypair } from "@solana/web3.js";
+import { getMint } from "@solana/spl-token";
 import bs58 from "bs58";
 
 // 在Node.js环境中加载环境变量
@@ -133,3 +134,42 @@ export function validatePrivateKey(privateKey: string): {
     return { isValid: false, error: "私钥格式无效，请确保是有效的Base58编码" };
   }
 }
+
+// 代币信息返回接口
+export interface TokenInfo {
+  mint: string; // 代币地址
+  decimals: number; // 精度
+  supply: string; // 总供应量
+  mintAuthority: PublicKey | null;
+  freezeAuthority: PublicKey | null;
+}
+
+export async function getTokenInfo(mint: string): Promise<TokenInfo> {
+  try {
+    const mintPubkey = new PublicKey(mint);
+
+    // 获取链上数据
+    const onChainData = await getMint(connection, mintPubkey);
+
+    // 构建返回对象
+    const tokenInfo: TokenInfo = {
+      mint: mint,
+      decimals: onChainData.decimals,
+      supply: onChainData.supply.toString(),
+      mintAuthority: onChainData.mintAuthority,
+      freezeAuthority: onChainData.freezeAuthority,
+    };
+
+    return tokenInfo;
+  } catch (error) {
+    console.error("获取代币信息失败:", error);
+    throw error;
+  }
+}
+
+async function main() {
+  const mint = "So11111111111111111111111111111111111111112";
+  const tokenInfo = await getTokenInfo(mint);
+  console.log(tokenInfo.decimals);
+}
+main().catch(console.error);
