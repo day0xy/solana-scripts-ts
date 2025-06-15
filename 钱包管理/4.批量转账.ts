@@ -1318,5 +1318,5 @@ async function main() {
   console.log("取消注释示例代码来测试批量转账功能");
 }
 
-// 取消注释下面这行来运行示例
+
 // main().catch(console.error);

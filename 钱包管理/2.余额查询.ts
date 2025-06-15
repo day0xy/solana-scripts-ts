@@ -1,7 +1,5 @@
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { isValidSolanaAddress, connection } from "../辅助功能/1.辅助功能.ts";
-import test from "node:test";
-import { log } from "node:console";
 
 export async function getWalletBalance(wallet: string): Promise<number> {
   //做一个地址检查
@@ -46,7 +44,6 @@ async function main() {
   let failedCount = 0;
 
   Object.entries(balances).forEach(([address, balance], index) => {
-
     if (balance !== null) {
       console.log(`${index + 1}. ${address} | ${balance.toFixed(6)} SOL`);
       totalBalance += balance;
@@ -66,4 +63,4 @@ async function main() {
 // ) {
 //   main().catch(console.error);
 // }
-main().catch(console.error);
+// main().catch(console.error);
