@@ -1,5 +1,13 @@
 import axios from "axios";
-import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
+import {
+  PublicKey,
+  Transaction,
+  VersionedTransaction,
+  Connection,
+  Keypair,
+  TransactionSignature,
+  SendOptions,
+} from "@solana/web3.js";
 import dotenv from "dotenv";
 import type { QuoteParams } from "./quote.ts";
 import { getSwapQuote } from "./quote.ts";
@@ -168,11 +176,86 @@ export async function getSwapInstructions(
   }
 }
 
+// 反序列化交易函数
+export function deserializeTransaction(
+  swapTransactionData: any
+): Transaction | VersionedTransaction {
+  try {
+    //先获取swapTransaction字段
+    const { swapTransaction } = swapTransactionData;
+
+    if (!swapTransaction) {
+      throw new Error("交易数据中没有找到 swapTransaction 字段");
+    }
+
+    // 将 base64 编码的交易数据转换为 Buffer
+    const transactionBuffer = Buffer.from(swapTransaction, "base64");
+
+    // 尝试反序列化为 VersionedTransaction
+    try {
+      const versionedTransaction =
+        VersionedTransaction.deserialize(transactionBuffer);
+
+      return versionedTransaction;
+    } catch (versionedError) {
+      console.log("无法反序列化为 VersionedTransaction，尝试传统交易格式");
+
+      // 如果失败，尝试反序列化为传统 Transaction
+      try {
+        const legacyTransaction = Transaction.from(transactionBuffer);
+        console.log("✅ 成功反序列化为传统 Transaction");
+        return legacyTransaction;
+      } catch (legacyError) {
+        throw new Error(
+          `反序列化失败: VersionedTransaction error: ${versionedError.message}, Legacy Transaction error: ${legacyError.message}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error("❌ 反序列化交易失败:", error);
+    throw error;
+  }
+}
+
+// 执行交易函数
+export async function executeSwapTransaction(
+  connection: Connection,
+  transaction: Transaction | VersionedTransaction,
+  signer: Keypair,
+  options?: SendOptions
+): Promise<TransactionSignature> {
+  try {
+    // 先签名
+    transaction.sign([signer]);
+    const transactionBinary = transaction.serialize();
+    const signature = await connection.sendRawTransaction(transactionBinary, {
+      maxRetries: 2,
+      skipPreflight: true,
+    });
+
+    const confirmation = await connection.confirmTransaction(
+      { signature },
+      "finalized"
+    );
+
+    if (confirmation.value.err) {
+      throw new Error(
+        `Transaction failed: ${JSON.stringify(
+          confirmation.value.err
+        )}\nhttps://solscan.io/tx/${signature}/`
+      );
+    } else
+      console.log(
+        `Transaction successful: https://solscan.io/tx/${signature}/`
+      );
+  } catch (error) {
+    console.error("❌ 执行交易失败:", error);
+    throw error;
+  }
+}
+
 // 示例使用
 async function main() {
-  console.log("=== Jupiter Swap 统一演示 ===\n");
-
-  // 1. 检查环境变量
   const userWallet = process.env.DEV_ADDRESS1;
   if (!userWallet) {
     console.error("❌ 错误: DEV_ADDRESS1 环境变量未设置");
@@ -216,14 +299,42 @@ async function main() {
     // 方式1: 直接构建完整交易
     console.log("\n🔧 方式1: 构建完整交易 (/swap)");
     const swapTransaction = await buildSwapTransaction(commonParams);
-    console.log(JSON.stringify(swapTransaction, null, 2));
+    console.log("📄 交易数据:", JSON.stringify(swapTransaction, null, 2));
+
+    // 演示反序列化功能
+    console.log("\n🔄 演示反序列化交易:");
+    try {
+      const deserializedTx = deserializeTransaction(swapTransaction);
+      console.log(
+        `✅ 反序列化成功，交易类型: ${
+          deserializedTx instanceof VersionedTransaction
+            ? "VersionedTransaction"
+            : "Transaction"
+        }`
+      );
+
+      // 如果需要执行交易，请取消下面的注释并提供私钥
+      /*
+      console.log("\n🚀 执行交易演示 (注释状态，需要私钥):");
+      // 注意: 实际使用时需要提供真实的 Connection 和 Keypair
+      const connection = new Connection("https://api.mainnet-beta.solana.com");
+      const signer = Keypair.fromSecretKey(YOUR_SECRET_KEY_ARRAY);
+      
+      const signature = await executeSwapTransaction(connection, deserializedTx, signer);
+      console.log("交易签名:", signature);
+      
+      // 或者使用一步到位的函数
+      const signature2 = await buildAndExecuteSwap(commonParams, connection, signer);
+      console.log("一步到位交易签名:", signature2);
+      */
+    } catch (deserializeError) {
+      console.error("反序列化失败:", deserializeError.message);
+    }
 
     // 方式2: 获取分解指令
     console.log("\n🔧 方式2: 获取分解指令 (/swap-instructions)");
     const swapInstructions = await getSwapInstructions(commonParams);
-    
-    // 格式化输出 JSON，第二个参数是替换函数(null表示不替换)，第三个参数是缩进空格数
-    console.log(JSON.stringify(swapInstructions, null, 2));
+    console.log("📄 指令数据:", JSON.stringify(swapInstructions, null, 2));
   } catch (error) {
     console.error("\n❌ 操作失败:", error.message || error);
     if (error.response?.data) {
@@ -233,3 +344,75 @@ async function main() {
 }
 
 main().catch(console.error);
+
+// 实际执行交易的示例函数（需要私钥，默认不执行）
+async function executeSwapExample() {
+  // ⚠️ 警告: 这是实际执行交易的示例，需要真实的私钥和资金
+  // 仅在了解风险的情况下使用
+
+  const userWallet = process.env.DEV_ADDRESS1;
+  const privateKey = process.env.DEV_PRIVATE_KEY1; // base58 编码的私钥
+
+  if (!userWallet || !privateKey) {
+    console.log(
+      "⚠️  执行交易需要设置 DEV_ADDRESS1 和 DEV_PRIVATE_KEY1 环境变量"
+    );
+    return;
+  }
+
+  try {
+    // 1. 设置连接和签名者
+    const connection = new Connection(
+      process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
+      "confirmed"
+    );
+
+    // 从 base58 私钥创建 Keypair
+    const secretKeyArray = Uint8Array.from(Buffer.from(privateKey, "base64"));
+    const signer = Keypair.fromSecretKey(secretKeyArray);
+
+    // 2. 设置交易参数（小额测试）
+    const quoteParams: QuoteParams = {
+      inputMint: "So11111111111111111111111111111111111111112", // SOL
+      outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+      amount: 0.01, // 小额测试：0.01 SOL
+      slippageBps: 100, // 1% 滑点
+      swapMode: "ExactIn",
+    };
+
+    const quote = await getSwapQuote(quoteParams);
+
+    const swapParams: SwapTransactionParams = {
+      quoteResponse: quote,
+      userPublicKey: userWallet,
+      wrapAndUnwrapSol: true,
+      useSharedAccounts: true,
+      prioritizationFeeLamports: {
+        priorityLevelWithMaxLamports: {
+          priorityLevel: "medium",
+          maxLamports: 50000, // 较低的优先费用上限
+        },
+      },
+    };
+
+    // 3. 一步到位执行交易
+    console.log("🚀 开始执行 Swap 交易...");
+    const signature = await buildAndExecuteSwap(
+      swapParams,
+      connection,
+      signer,
+      {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+        maxRetries: 3,
+      }
+    );
+
+    console.log(`🎉 交易成功完成! 签名: ${signature}`);
+  } catch (error) {
+    console.error("❌ 执行交易失败:", error);
+  }
+}
+
+// 取消注释下面这行来执行实际的交易
+// executeSwapExample().catch(console.error);
