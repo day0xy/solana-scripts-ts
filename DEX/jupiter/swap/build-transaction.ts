@@ -106,35 +106,99 @@ export async function buildSwapTransaction(
   }
 }
 
+// 获取 Swap Instructions (返回分解的指令而不是完整交易)
+export async function getSwapInstructions(
+  params: SwapTransactionParams
+): Promise<any> {
+  const requestBody = {
+    quoteResponse: params.quoteResponse,
+    userPublicKey: params.userPublicKey,
+
+    ...(params.wrapAndUnwrapSol !== undefined && {
+      wrapAndUnwrapSol: params.wrapAndUnwrapSol,
+    }),
+    ...(params.useSharedAccounts !== undefined && {
+      useSharedAccounts: params.useSharedAccounts,
+    }),
+    ...(params.feeAccount && { feeAccount: params.feeAccount }),
+    ...(params.trackingAccount && { trackingAccount: params.trackingAccount }),
+    ...(params.prioritizationFeeLamports && {
+      prioritizationFeeLamports: params.prioritizationFeeLamports,
+    }),
+    ...(params.asLegacyTransaction !== undefined && {
+      asLegacyTransaction: params.asLegacyTransaction,
+    }),
+    ...(params.destinationTokenAccount && {
+      destinationTokenAccount: params.destinationTokenAccount,
+    }),
+    ...(params.dynamicComputeUnitLimit !== undefined && {
+      dynamicComputeUnitLimit: params.dynamicComputeUnitLimit,
+    }),
+    ...(params.skipUserAccountsRpcCalls !== undefined && {
+      skipUserAccountsRpcCalls: params.skipUserAccountsRpcCalls,
+    }),
+    ...(params.dynamicSlippage !== undefined && {
+      dynamicSlippage: params.dynamicSlippage,
+    }),
+    ...(params.computeUnitPriceMicroLamports !== undefined && {
+      computeUnitPriceMicroLamports: params.computeUnitPriceMicroLamports,
+    }),
+    ...(params.blockhashSlotsToExpiry !== undefined && {
+      blockhashSlotsToExpiry: params.blockhashSlotsToExpiry,
+    }),
+  };
+
+  const config = {
+    method: "post",
+    maxBodyLength: Infinity,
+    url: "https://lite-api.jup.ag/swap/v1/swap-instructions",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    data: JSON.stringify(requestBody),
+  };
+
+  try {
+    const response = await axios.request(config);
+    return response.data;
+  } catch (error) {
+    console.error("获取交换指令失败:", error);
+    throw error;
+  }
+}
+
 // 示例使用
 async function main() {
+  console.log("=== Jupiter Swap 统一演示 ===\n");
+
+  // 1. 检查环境变量
   const userWallet = process.env.DEV_ADDRESS1;
+  if (!userWallet) {
+    console.error("❌ 错误: DEV_ADDRESS1 环境变量未设置");
+    return;
+  }
+  console.log("✅ 使用钱包地址:", userWallet);
 
   // 2. 设置交易参数
   const inputMint = "So11111111111111111111111111111111111111112"; // SOL
   const outputMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC
   const amount = 1;
 
-  console.log(`\n=== 第一步: 获取报价 ===`);
-  console.log(`输入代币: ${inputMint} (SOL)`);
-  console.log(`输出代币: ${outputMint} (USDC)`);
-  console.log(`交换数量: ${amount} SOL`);
-
-  // 3. 调用 quote 函数获取报价
-  const quoteParams: QuoteParams = {
-    inputMint: inputMint,
-    outputMint: outputMint,
-    amount: amount,
-    slippageBps: 50, // 0.5% 滑点
-  };
-
   try {
+    // 3. 获取报价
+    const quoteParams: QuoteParams = {
+      inputMint: inputMint,
+      outputMint: outputMint,
+      amount: amount,
+      slippageBps: 50,
+      swapMode: "ExactIn",
+    };
+
     const quote = await getSwapQuote(quoteParams);
 
-    console.log(`\n=== 第二步: 构建交易 ===`);
-
-    // 4. 构建交易参数
-    const transactionParams: SwapTransactionParams = {
+    // 4. 通用参数配置
+    const commonParams: SwapTransactionParams = {
       quoteResponse: quote,
       userPublicKey: userWallet,
       wrapAndUnwrapSol: true,
@@ -142,21 +206,29 @@ async function main() {
       prioritizationFeeLamports: {
         priorityLevelWithMaxLamports: {
           priorityLevel: "medium",
-          maxLamports: 100000, // 最大 0.0001 SOL
+          maxLamports: 100000,
         },
       },
-      asLegacyTransaction: false,
-      dynamicComputeUnitLimit: true,
     };
 
-    const swapTransactionResponse = await buildSwapTransaction(
-      transactionParams
-    );
+    console.log(`\n=== 第二步: 演示两种构建方式 ===`);
 
-    console.log("\n📋 交易响应信息:");
-    console.log(swapTransactionResponse);
+    // 方式1: 直接构建完整交易
+    console.log("\n🔧 方式1: 构建完整交易 (/swap)");
+    const swapTransaction = await buildSwapTransaction(commonParams);
+    console.log(JSON.stringify(swapTransaction, null, 2));
+
+    // 方式2: 获取分解指令
+    console.log("\n🔧 方式2: 获取分解指令 (/swap-instructions)");
+    const swapInstructions = await getSwapInstructions(commonParams);
+    
+    // 格式化输出 JSON，第二个参数是替换函数(null表示不替换)，第三个参数是缩进空格数
+    console.log(JSON.stringify(swapInstructions, null, 2));
   } catch (error) {
     console.error("\n❌ 操作失败:", error.message || error);
+    if (error.response?.data) {
+      console.error("API 错误详情:", error.response.data);
+    }
   }
 }
 
