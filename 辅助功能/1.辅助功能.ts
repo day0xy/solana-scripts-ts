@@ -1,3 +1,13 @@
+/*
+ * 辅助函数列表：
+ * isValidSolanaAddress - 验证Solana地址是否有效
+ * importWallet - 从私钥导入单个钱包
+ * batchImportWallet - 私钥批量导入钱包
+ * validatePrivateKey - 验证私钥格式是否正确
+ * getTokenInfo - 获取代币详细信息（decimals、supply、权限等）
+ * sleep - 延时函数
+ */
+
 import { PublicKey, Connection, Keypair } from "@solana/web3.js";
 import { getMint } from "@solana/spl-token";
 import bs58 from "bs58";
@@ -153,6 +163,10 @@ export async function getTokenInfo(mint: string): Promise<TokenInfo> {
     console.error("获取代币信息失败:", error);
     throw error;
   }
+}
+
+export async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function main() {
