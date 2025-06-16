@@ -10,8 +10,8 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { connection, sleep } from "./辅助功能/1.辅助功能.ts";
-import { batchGetWalletBalance } from "./钱包管理/2.余额查询.ts";
+import { connection, sleep } from "../辅助功能/1.辅助功能.ts";
+import { batchGetWalletBalance } from "../钱包管理/2.余额查询.ts";
 import bs58 from "bs58";
 import dotenv from "dotenv";
 
