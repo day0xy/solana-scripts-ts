@@ -31,13 +31,13 @@
 
 (一个地址向多个地址转账，支持相同数量、随机数量和自定义数量转账，还可以设置每笔转账间隔时间)
 
-- [x] 一对多SOL转账**(未测试)**
+- [x] 一对多SOL转账****
 
-- [x] 一对多token转账**(未测试)**
+- [x] 一对多token转账****
 
-- [x] 多对一SOL转账**(未测试)**
+- [x] 多对一SOL转账****
 
-- [x] 多对一token转账**(未测试)**
+- [x] 多对一token转账****
 
 # 代币管理
 
@@ -61,9 +61,22 @@
 
 ## jupiter
 
-- [x] swap api **(暂时没钱测试购买)**     交易费控制还没看，结合jito什么的
+- [x] swap api (暂时没钱测试购买)     交易费控制还没看，结合jito什么的
+
+https://github.com/jup-ag/jupiter-quote-api-node    后面用官方的sdk重写
+
 - [ ] trigger api
 - [x] token
 
+## raydium
+
+
+
+
+
 ## pump.fun
+
+
+
+
 
