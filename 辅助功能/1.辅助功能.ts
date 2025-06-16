@@ -2,32 +2,20 @@ import { PublicKey, Connection, Keypair } from "@solana/web3.js";
 import { getMint } from "@solana/spl-token";
 import bs58 from "bs58";
 
-// 在Node.js环境中加载环境变量
-if (typeof window === "undefined" && typeof process !== "undefined") {
-  try {
-    require("dotenv").config();
-  } catch (error) {
-    // dotenv不可用时静默失败
-  }
-}
+import dotenv from "dotenv";
 
-// 创建connection - 兼容浏览器和Node.js环境
-const helius_api_key =
-  typeof window !== "undefined"
-    ? import.meta.env?.VITE_HELIUS_API_KEY // 浏览器环境使用Vite环境变量
-    : process.env.HELIUS_API_KEY || process.env.VITE_HELIUS_API_KEY; // Node.js环境使用process.env
+dotenv.config();
 
-const rpcUrl = helius_api_key
-  ? `https://mainnet.helius-rpc.com/?api-key=${helius_api_key}`
-  : "https://api.mainnet-beta.solana.com";
+const helius_api_key = process.env.HELIUS_API_KEY;
 
-export const connection = new Connection(rpcUrl, "confirmed");
+const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${helius_api_key}`;
+const devNet_RPCUrl = `https://devnet.helius-rpc.com/?api-key=${helius_api_key}`;
+const testRpcUrl = "http://127.0.0.1:8899";
 
-/**
- * 检查给定的字符串是否为有效的Solana地址（公钥）
- * @param address 要检查的地址字符串
- * @returns { isValid: boolean, error?: string } 返回验证结果和可选的错误信息
- */
+// export const connection = new Connection(rpcUrl, "confirmed");
+// export const connection = new Connection(testRpcUrl, "confirmed");
+export const connection = new Connection(devNet_RPCUrl, "confirmed");
+
 export function isValidSolanaAddress(address: string): {
   isValid: boolean;
   error?: string;

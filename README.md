@@ -59,5 +59,7 @@
 
 # DEX
 
+## jupiter
+
 ## pump.fun
 

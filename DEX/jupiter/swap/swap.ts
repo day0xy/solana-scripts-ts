@@ -7,10 +7,11 @@ import {
   Keypair,
   TransactionSignature,
   SendOptions,
+  TransactionInstruction,
 } from "@solana/web3.js";
-import dotenv from "dotenv";
 import type { QuoteParams } from "./quote.ts";
 import { getSwapQuote } from "./quote.ts";
+import dotenv from "dotenv";
 
 dotenv.config();
 // 优先级级别接口
@@ -217,6 +218,20 @@ export function deserializeTransaction(
   }
 }
 
+export async function deserializeInstruction(
+  instruction: TransactionInstruction
+) {
+  return new TransactionInstruction({
+    programId: new PublicKey(instruction.programId),
+    keys: instruction.accounts.map((key) => ({
+      pubkey: new PublicKey(key.pubkey),
+      isSigner: key.isSigner,
+      isWritable: key.isWritable,
+    })),
+    data: Buffer.from(instruction.data, "base64"),
+  });
+}
+
 // 执行交易函数
 export async function executeSwapTransaction(
   connection: Connection,
@@ -226,30 +241,75 @@ export async function executeSwapTransaction(
 ): Promise<TransactionSignature> {
   try {
     // 先签名
-    transaction.sign([signer]);
+    if (transaction instanceof VersionedTransaction) {
+      // VersionedTransaction 需要签名者数组
+      transaction.sign([signer]);
+    } else {
+      // 传统 Transaction 直接传入单个签名者
+      transaction.sign(signer);
+    }
     const transactionBinary = transaction.serialize();
     const signature = await connection.sendRawTransaction(transactionBinary, {
       maxRetries: 2,
       skipPreflight: true,
     });
 
+    console.log(`✅ 交易已发送，签名: ${signature}`);
+
+    const latestBlockhash = await connection.getLatestBlockhash();
+
     const confirmation = await connection.confirmTransaction(
-      { signature },
-      "finalized"
+      {
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      },
+      "confirmed"
     );
 
     if (confirmation.value.err) {
       throw new Error(
-        `Transaction failed: ${JSON.stringify(
+        `❌ 交易失败: ${JSON.stringify(
           confirmation.value.err
-        )}\nhttps://solscan.io/tx/${signature}/`
+        )}\n🔗 Solscan 链接: https://solscan.io/tx/${signature}/`
       );
-    } else
-      console.log(
-        `Transaction successful: https://solscan.io/tx/${signature}/`
-      );
+    } else {
+      console.log(`🎉 交易确认成功! 签名: ${signature}`);
+      console.log(`🔗 Solscan 链接: https://solscan.io/tx/${signature}/`);
+    }
+
+    return signature;
   } catch (error) {
     console.error("❌ 执行交易失败:", error);
+    throw error;
+  }
+}
+
+// 完整的交易流程：构建 -> 反序列化 -> 执行
+export async function buildAndExecuteSwap(
+  params: SwapTransactionParams,
+  connection: Connection,
+  signer: Keypair,
+  executeOptions?: SendOptions
+): Promise<TransactionSignature> {
+  try {
+    console.log("🔧 第1步: 构建交易...");
+    const swapTransactionData = await buildSwapTransaction(params);
+
+    console.log("🔄 第2步: 反序列化交易...");
+    const transaction = deserializeTransaction(swapTransactionData);
+
+    console.log("🚀 第3步: 执行交易...");
+    const signature = await executeSwapTransaction(
+      connection,
+      transaction,
+      signer,
+      executeOptions
+    );
+
+    return signature;
+  } catch (error) {
+    console.error("❌ 完整交易流程失败:", error);
     throw error;
   }
 }
@@ -344,75 +404,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
-// 实际执行交易的示例函数（需要私钥，默认不执行）
-async function executeSwapExample() {
-  // ⚠️ 警告: 这是实际执行交易的示例，需要真实的私钥和资金
-  // 仅在了解风险的情况下使用
-
-  const userWallet = process.env.DEV_ADDRESS1;
-  const privateKey = process.env.DEV_PRIVATE_KEY1; // base58 编码的私钥
-
-  if (!userWallet || !privateKey) {
-    console.log(
-      "⚠️  执行交易需要设置 DEV_ADDRESS1 和 DEV_PRIVATE_KEY1 环境变量"
-    );
-    return;
-  }
-
-  try {
-    // 1. 设置连接和签名者
-    const connection = new Connection(
-      process.env.SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
-      "confirmed"
-    );
-
-    // 从 base58 私钥创建 Keypair
-    const secretKeyArray = Uint8Array.from(Buffer.from(privateKey, "base64"));
-    const signer = Keypair.fromSecretKey(secretKeyArray);
-
-    // 2. 设置交易参数（小额测试）
-    const quoteParams: QuoteParams = {
-      inputMint: "So11111111111111111111111111111111111111112", // SOL
-      outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
-      amount: 0.01, // 小额测试：0.01 SOL
-      slippageBps: 100, // 1% 滑点
-      swapMode: "ExactIn",
-    };
-
-    const quote = await getSwapQuote(quoteParams);
-
-    const swapParams: SwapTransactionParams = {
-      quoteResponse: quote,
-      userPublicKey: userWallet,
-      wrapAndUnwrapSol: true,
-      useSharedAccounts: true,
-      prioritizationFeeLamports: {
-        priorityLevelWithMaxLamports: {
-          priorityLevel: "medium",
-          maxLamports: 50000, // 较低的优先费用上限
-        },
-      },
-    };
-
-    // 3. 一步到位执行交易
-    console.log("🚀 开始执行 Swap 交易...");
-    const signature = await buildAndExecuteSwap(
-      swapParams,
-      connection,
-      signer,
-      {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
-        maxRetries: 3,
-      }
-    );
-
-    console.log(`🎉 交易成功完成! 签名: ${signature}`);
-  } catch (error) {
-    console.error("❌ 执行交易失败:", error);
-  }
-}
-
-// 取消注释下面这行来执行实际的交易
-// executeSwapExample().catch(console.error);
