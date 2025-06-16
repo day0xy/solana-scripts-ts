@@ -34,8 +34,8 @@ export async function batchGetWalletBalance(
 async function main() {
   // 测试钱包地址
   const testWallets = [
-    "DNfuF1L62WWyW3pNakVkyGGFzVVhj4Yr52jSmdTyeBHm", // System Program (有效地址)
-    "C3nLTNMK6Ao1s3J1CQhv8GbT3NoMmifWoi9PGEcYd9hP", // Wrapped SOL (有效地址)
+    "Hu7tajXZgREdAqjpncYXc3DJGTag7hQxugyiJYrSK8j8", 
+    "93rJ8i5GfqYADUuhTimK3FruQ9Fq43auPZQkAts2WdfT", 
   ];
 
   const balances = await batchGetWalletBalance(testWallets);
