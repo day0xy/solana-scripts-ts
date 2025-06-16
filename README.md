@@ -62,6 +62,8 @@
 ## jupiter
 
 - [x] swap api **(暂时没钱测试购买)**     交易费控制还没看，结合jito什么的
+- [ ] trigger api
+- [x] token
 
 ## pump.fun
 
