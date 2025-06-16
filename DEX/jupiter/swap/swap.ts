@@ -5,14 +5,15 @@ import {
   VersionedTransaction,
   Connection,
   Keypair,
-  TransactionSignature,
-  SendOptions,
   TransactionInstruction,
+  TransactionMessage,
+  AddressLookupTableAccount,
 } from "@solana/web3.js";
 import type { QuoteParams } from "./quote.ts";
 import { getSwapQuote } from "./quote.ts";
+import { connection } from "../../../辅助功能/1.辅助功能.ts";
+import bs58 from "bs58";
 import dotenv from "dotenv";
-
 dotenv.config();
 // 优先级级别接口
 export interface PriorityLevelWithMaxLamports {
@@ -51,11 +52,9 @@ export interface SwapTransactionParams {
   blockhashSlotsToExpiry?: number; // 交易有效期（槽数），如果传入 10 个 slot，交易将在到期前有效期约为 400ms * 10 = 大约 4 秒
 }
 
-// 构建 Jupiter swap 交易
-export async function buildSwapTransaction(
-  params: SwapTransactionParams
-): Promise<any> {
-  const requestBody = {
+// 构建请求体的通用函数
+function buildJupiterRequestBody(params: SwapTransactionParams): any {
+  return {
     // 必需参数
     quoteResponse: params.quoteResponse,
     userPublicKey: params.userPublicKey,
@@ -94,11 +93,19 @@ export async function buildSwapTransaction(
       blockhashSlotsToExpiry: params.blockhashSlotsToExpiry,
     }),
   };
+}
+
+// 发送Jupiter API请求的通用函数
+async function sendJupiterRequest(
+  params: SwapTransactionParams,
+  endpoint: string
+): Promise<any> {
+  const requestBody = buildJupiterRequestBody(params);
 
   const config = {
     method: "post",
     maxBodyLength: Infinity,
-    url: "https://lite-api.jup.ag/swap/v1/swap",
+    url: `https://lite-api.jup.ag/swap/v1/${endpoint}`,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -110,77 +117,29 @@ export async function buildSwapTransaction(
     const response = await axios.request(config);
     return response.data;
   } catch (error) {
-    console.error("构建交易失败:", error);
+    console.error(`Jupiter API请求失败 (${endpoint}):`, error);
     throw error;
   }
+}
+
+// 获取 Jupiter 序列化交易
+export async function getSerializedTransaction(
+  params: SwapTransactionParams
+): Promise<any> {
+  return sendJupiterRequest(params, "swap");
 }
 
 // 获取 Swap Instructions (返回分解的指令而不是完整交易)
 export async function getSwapInstructions(
   params: SwapTransactionParams
 ): Promise<any> {
-  const requestBody = {
-    quoteResponse: params.quoteResponse,
-    userPublicKey: params.userPublicKey,
-
-    ...(params.wrapAndUnwrapSol !== undefined && {
-      wrapAndUnwrapSol: params.wrapAndUnwrapSol,
-    }),
-    ...(params.useSharedAccounts !== undefined && {
-      useSharedAccounts: params.useSharedAccounts,
-    }),
-    ...(params.feeAccount && { feeAccount: params.feeAccount }),
-    ...(params.trackingAccount && { trackingAccount: params.trackingAccount }),
-    ...(params.prioritizationFeeLamports && {
-      prioritizationFeeLamports: params.prioritizationFeeLamports,
-    }),
-    ...(params.asLegacyTransaction !== undefined && {
-      asLegacyTransaction: params.asLegacyTransaction,
-    }),
-    ...(params.destinationTokenAccount && {
-      destinationTokenAccount: params.destinationTokenAccount,
-    }),
-    ...(params.dynamicComputeUnitLimit !== undefined && {
-      dynamicComputeUnitLimit: params.dynamicComputeUnitLimit,
-    }),
-    ...(params.skipUserAccountsRpcCalls !== undefined && {
-      skipUserAccountsRpcCalls: params.skipUserAccountsRpcCalls,
-    }),
-    ...(params.dynamicSlippage !== undefined && {
-      dynamicSlippage: params.dynamicSlippage,
-    }),
-    ...(params.computeUnitPriceMicroLamports !== undefined && {
-      computeUnitPriceMicroLamports: params.computeUnitPriceMicroLamports,
-    }),
-    ...(params.blockhashSlotsToExpiry !== undefined && {
-      blockhashSlotsToExpiry: params.blockhashSlotsToExpiry,
-    }),
-  };
-
-  const config = {
-    method: "post",
-    maxBodyLength: Infinity,
-    url: "https://lite-api.jup.ag/swap/v1/swap-instructions",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    data: JSON.stringify(requestBody),
-  };
-
-  try {
-    const response = await axios.request(config);
-    return response.data;
-  } catch (error) {
-    console.error("获取交换指令失败:", error);
-    throw error;
-  }
+  return sendJupiterRequest(params, "swap-instructions");
 }
 
 // 反序列化交易函数
 export function deserializeTransaction(
   swapTransactionData: any
-): Transaction | VersionedTransaction {
+): VersionedTransaction {
   try {
     //先获取swapTransaction字段
     const { swapTransaction } = swapTransactionData;
@@ -199,18 +158,7 @@ export function deserializeTransaction(
 
       return versionedTransaction;
     } catch (versionedError) {
-      console.log("无法反序列化为 VersionedTransaction，尝试传统交易格式");
-
-      // 如果失败，尝试反序列化为传统 Transaction
-      try {
-        const legacyTransaction = Transaction.from(transactionBuffer);
-        console.log("✅ 成功反序列化为传统 Transaction");
-        return legacyTransaction;
-      } catch (legacyError) {
-        throw new Error(
-          `反序列化失败: VersionedTransaction error: ${versionedError.message}, Legacy Transaction error: ${legacyError.message}`
-        );
-      }
+      console.log("无法反序列化为 VersionedTransaction");
     }
   } catch (error) {
     console.error("❌ 反序列化交易失败:", error);
@@ -218,12 +166,13 @@ export function deserializeTransaction(
   }
 }
 
-export async function deserializeInstruction(
-  instruction: TransactionInstruction
-) {
+// 指令反序列化函数
+export function deserializeInstruction(
+  instruction: any
+): TransactionInstruction {
   return new TransactionInstruction({
     programId: new PublicKey(instruction.programId),
-    keys: instruction.accounts.map((key) => ({
+    keys: instruction.accounts.map((key: any) => ({
       pubkey: new PublicKey(key.pubkey),
       isSigner: key.isSigner,
       isWritable: key.isWritable,
@@ -232,22 +181,142 @@ export async function deserializeInstruction(
   });
 }
 
+// 获取地址查找表账户
+export async function getAddressLookupTableAccounts(
+  connection: Connection,
+  keys: string[]
+): Promise<AddressLookupTableAccount[]> {
+  if (!keys || keys.length === 0) {
+    return [];
+  }
+
+  const addressLookupTableAccountInfos =
+    await connection.getMultipleAccountsInfo(
+      keys.map((key) => new PublicKey(key))
+    );
+
+  return addressLookupTableAccountInfos.reduce((acc, accountInfo, index) => {
+    const addressLookupTableAddress = keys[index];
+    if (accountInfo) {
+      const addressLookupTableAccount = new AddressLookupTableAccount({
+        key: new PublicKey(addressLookupTableAddress),
+        state: AddressLookupTableAccount.deserialize(accountInfo.data),
+      });
+      acc.push(addressLookupTableAccount);
+    }
+    return acc;
+  }, new Array<AddressLookupTableAccount>());
+}
+
+// 构建完整的版本化交易（支持ALT压缩）
+export async function buildVersionedTransaction(
+  params: SwapTransactionParams,
+  connection: Connection,
+  payer: Keypair,
+  includeInstructions?: {
+    includeSetup?: boolean;
+    includeCleanup?: boolean;
+    includeComputeBudget?: boolean;
+    includeTokenLedger?: boolean;
+  }
+): Promise<VersionedTransaction> {
+  try {
+    // 获取分解指令
+    const instructions = await getSwapInstructions(params);
+
+    if (instructions.error) {
+      throw new Error("获取交换指令失败: " + instructions.error);
+    }
+    //解构赋值
+    const {
+      tokenLedgerInstruction,
+      computeBudgetInstructions,
+      setupInstructions,
+      swapInstruction: swapInstructionPayload,
+      cleanupInstruction,
+      addressLookupTableAddresses,
+    } = instructions;
+
+    // 配置要包含的指令（默认全部包含）
+    const config = {
+      includeSetup: true,
+      includeCleanup: true,
+      includeComputeBudget: true,
+      includeTokenLedger: true,
+      ...includeInstructions,
+    };
+
+    // 构建指令列表
+    const transactionInstructions: TransactionInstruction[] = [];
+
+    // 添加计算预算指令
+    if (config.includeComputeBudget && computeBudgetInstructions?.length > 0) {
+      transactionInstructions.push(
+        ...computeBudgetInstructions.map(deserializeInstruction)
+      );
+    }
+
+    // 添加 Token Ledger 指令
+    if (config.includeTokenLedger && tokenLedgerInstruction) {
+      transactionInstructions.push(
+        deserializeInstruction(tokenLedgerInstruction)
+      );
+    }
+
+    // 添加设置指令（ATA创建等）
+    if (config.includeSetup && setupInstructions?.length > 0) {
+      transactionInstructions.push(
+        ...setupInstructions.map(deserializeInstruction)
+      );
+    }
+
+    // 添加核心交换指令
+    if (swapInstructionPayload) {
+      transactionInstructions.push(
+        deserializeInstruction(swapInstructionPayload)
+      );
+    }
+
+    // 添加清理指令（SOL解包装等）
+    if (config.includeCleanup && cleanupInstruction) {
+      transactionInstructions.push(deserializeInstruction(cleanupInstruction));
+    }
+
+    // 获取地址查找表账户
+    const addressLookupTableAccounts = await getAddressLookupTableAccounts(
+      connection,
+      addressLookupTableAddresses || []
+    );
+
+    // 获取最新区块哈希
+    const { blockhash } = await connection.getLatestBlockhash();
+
+    // 构建版本化交易消息
+    const messageV0 = new TransactionMessage({
+      payerKey: payer.publicKey,
+      recentBlockhash: blockhash,
+      instructions: transactionInstructions,
+    }).compileToV0Message(addressLookupTableAccounts);
+
+    // 创建版本化交易
+    const transaction = new VersionedTransaction(messageV0);
+
+    return transaction;
+  } catch (error) {
+    console.error("❌ 构建版本化交易失败:", error);
+    throw error;
+  }
+}
+
 // 执行交易函数
 export async function executeSwapTransaction(
   connection: Connection,
-  transaction: Transaction | VersionedTransaction,
-  signer: Keypair,
-  options?: SendOptions
-): Promise<TransactionSignature> {
+  transaction: VersionedTransaction,
+  signer: Keypair
+): Promise<any> {
   try {
-    // 先签名
-    if (transaction instanceof VersionedTransaction) {
-      // VersionedTransaction 需要签名者数组
-      transaction.sign([signer]);
-    } else {
-      // 传统 Transaction 直接传入单个签名者
-      transaction.sign(signer);
-    }
+    transaction.sign([signer]);
+
     const transactionBinary = transaction.serialize();
     const signature = await connection.sendRawTransaction(transactionBinary, {
       maxRetries: 2,
@@ -285,31 +354,50 @@ export async function executeSwapTransaction(
   }
 }
 
-// 完整的交易流程：构建 -> 反序列化 -> 执行
-export async function buildAndExecuteSwap(
-  params: SwapTransactionParams,
+// 执行版本化交易（便捷函数）
+export async function executeVersionedTransaction(
   connection: Connection,
-  signer: Keypair,
-  executeOptions?: SendOptions
-): Promise<TransactionSignature> {
+  transaction: VersionedTransaction,
+  signer: Keypair
+): Promise<string> {
   try {
-    console.log("🔧 第1步: 构建交易...");
-    const swapTransactionData = await buildSwapTransaction(params);
+    // 签名交易
+    transaction.sign([signer]);
 
-    console.log("🔄 第2步: 反序列化交易...");
-    const transaction = deserializeTransaction(swapTransactionData);
+    // 模拟交易（可选，用于调试）
+    const simulateResult = await connection.simulateTransaction(transaction);
+    if (simulateResult.value.err) {
+      console.warn("⚠️ 交易模拟警告:", simulateResult.value.err);
+    }
 
-    console.log("🚀 第3步: 执行交易...");
-    const signature = await executeSwapTransaction(
-      connection,
-      transaction,
-      signer,
-      executeOptions
+    // 发送交易
+    const signature = await connection.sendTransaction(transaction, {
+      maxRetries: 2,
+      skipPreflight: true,
+    });
+
+    console.log(`✅ 交易已发送，签名: ${signature}`);
+    console.log(`🔗 Solscan 链接: https://solscan.io/tx/${signature}/`);
+
+    // 等待确认
+    const latestBlockhash = await connection.getLatestBlockhash();
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      },
+      "confirmed"
     );
 
+    if (confirmation.value.err) {
+      throw new Error(`❌ 交易失败: ${JSON.stringify(confirmation.value.err)}`);
+    }
+
+    console.log(`🎉 交易确认成功! 签名: ${signature}`);
     return signature;
   } catch (error) {
-    console.error("❌ 完整交易流程失败:", error);
+    console.error("❌ 执行版本化交易失败:", error);
     throw error;
   }
 }
@@ -317,19 +405,16 @@ export async function buildAndExecuteSwap(
 // 示例使用
 async function main() {
   const userWallet = process.env.DEV_ADDRESS1;
-  if (!userWallet) {
-    console.error("❌ 错误: DEV_ADDRESS1 环境变量未设置");
-    return;
-  }
-  console.log("✅ 使用钱包地址:", userWallet);
 
-  // 2. 设置交易参数
+  // 创建用户钱包 Keypair（用于签名）
+  const fromSecretKey = bs58.decode(process.env.DEV_PRIVATEKEY1);
+  const fromWallet = Keypair.fromSecretKey(fromSecretKey);
+
   const inputMint = "So11111111111111111111111111111111111111112"; // SOL
   const outputMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC
   const amount = 1;
 
   try {
-    // 3. 获取报价
     const quoteParams: QuoteParams = {
       inputMint: inputMint,
       outputMint: outputMint,
@@ -340,61 +425,42 @@ async function main() {
 
     const quote = await getSwapQuote(quoteParams);
 
-    // 4. 通用参数配置
     const commonParams: SwapTransactionParams = {
       quoteResponse: quote,
       userPublicKey: userWallet,
-      wrapAndUnwrapSol: true,
-      useSharedAccounts: true,
-      prioritizationFeeLamports: {
-        priorityLevelWithMaxLamports: {
-          priorityLevel: "medium",
-          maxLamports: 100000,
-        },
-      },
     };
 
-    console.log(`\n=== 第二步: 演示两种构建方式 ===`);
-
-    // 方式1: 直接构建完整交易
-    console.log("\n🔧 方式1: 构建完整交易 (/swap)");
-    const swapTransaction = await buildSwapTransaction(commonParams);
+    const swapTransaction = await getSerializedTransaction(commonParams);
     console.log("📄 交易数据:", JSON.stringify(swapTransaction, null, 2));
 
-    // 演示反序列化功能
-    console.log("\n🔄 演示反序列化交易:");
-    try {
-      const deserializedTx = deserializeTransaction(swapTransaction);
-      console.log(
-        `✅ 反序列化成功，交易类型: ${
-          deserializedTx instanceof VersionedTransaction
-            ? "VersionedTransaction"
-            : "Transaction"
-        }`
-      );
-
-      // 如果需要执行交易，请取消下面的注释并提供私钥
-      /*
-      console.log("\n🚀 执行交易演示 (注释状态，需要私钥):");
-      // 注意: 实际使用时需要提供真实的 Connection 和 Keypair
-      const connection = new Connection("https://api.mainnet-beta.solana.com");
-      const signer = Keypair.fromSecretKey(YOUR_SECRET_KEY_ARRAY);
-      
-      const signature = await executeSwapTransaction(connection, deserializedTx, signer);
-      console.log("交易签名:", signature);
-      
-      // 或者使用一步到位的函数
-      const signature2 = await buildAndExecuteSwap(commonParams, connection, signer);
-      console.log("一步到位交易签名:", signature2);
-      */
-    } catch (deserializeError) {
-      console.error("反序列化失败:", deserializeError.message);
-    }
-
     // 方式2: 获取分解指令
-    console.log("\n🔧 方式2: 获取分解指令 (/swap-instructions)");
+    console.log("\n🔧 获取分解指令 (/swap-instructions)");
     const swapInstructions = await getSwapInstructions(commonParams);
-    console.log("📄 指令数据:", JSON.stringify(swapInstructions, null, 2));
+    console.log(swapInstructions);
+
+    // 方式3: 构建版本化交易（新增功能）
+    console.log("\n🚀 方式3: 构建版本化交易（带ALT支持）");
+
+    // 构建完整的版本化交易
+    const versionedTx = await buildVersionedTransaction(
+      commonParams,
+      connection,
+      fromWallet,
+      {
+        includeSetup: true,
+        includeCleanup: true,
+        includeComputeBudget: true,
+        includeTokenLedger: false, // 通常不需要
+      }
+    );
+
+    console.log("✅ 版本化交易构建完成");
+    console.log(`📏 交易大小: ${versionedTx.serialize().length} bytes`);
+
+    // 执行版本化交易（可选）
+    console.log("\n🚀 执行版本化交易...");
+    // 注意：实际生产环境中请谨慎执行，这里仅作演示
+    // const signature = await executeVersionedTransaction(connection, versionedTx, fromWallet);
   } catch (error) {
     console.error("\n❌ 操作失败:", error.message || error);
     if (error.response?.data) {
