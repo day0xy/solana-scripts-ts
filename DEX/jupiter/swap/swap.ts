@@ -354,7 +354,7 @@ export async function executeSwapTransaction(
   }
 }
 
-// 执行版本化交易（便捷函数）
+// 执行版本化交易
 export async function executeVersionedTransaction(
   connection: Connection,
   transaction: VersionedTransaction,
@@ -364,7 +364,7 @@ export async function executeVersionedTransaction(
     // 签名交易
     transaction.sign([signer]);
 
-    // 模拟交易（可选，用于调试）
+    // 模拟交易
     const simulateResult = await connection.simulateTransaction(transaction);
     if (simulateResult.value.err) {
       console.warn("⚠️ 交易模拟警告:", simulateResult.value.err);
@@ -377,7 +377,6 @@ export async function executeVersionedTransaction(
     });
 
     console.log(`✅ 交易已发送，签名: ${signature}`);
-    console.log(`🔗 Solscan 链接: https://solscan.io/tx/${signature}/`);
 
     // 等待确认
     const latestBlockhash = await connection.getLatestBlockhash();
@@ -430,18 +429,14 @@ async function main() {
       userPublicKey: userWallet,
     };
 
-    const swapTransaction = await getSerializedTransaction(commonParams);
-    console.log("📄 交易数据:", JSON.stringify(swapTransaction, null, 2));
-
-    // 方式2: 获取分解指令
+    //  获取分解指令
     console.log("\n🔧 获取分解指令 (/swap-instructions)");
     const swapInstructions = await getSwapInstructions(commonParams);
     console.log(swapInstructions);
 
-    // 方式3: 构建版本化交易（新增功能）
-    console.log("\n🚀 方式3: 构建版本化交易（带ALT支持）");
+    //  构建V0交易
+    console.log("\n🚀 构建V0交易");
 
-    // 构建完整的版本化交易
     const versionedTx = await buildVersionedTransaction(
       commonParams,
       connection,
@@ -454,13 +449,7 @@ async function main() {
       }
     );
 
-    console.log("✅ 版本化交易构建完成");
-    console.log(`📏 交易大小: ${versionedTx.serialize().length} bytes`);
-
-    // 执行版本化交易（可选）
-    console.log("\n🚀 执行版本化交易...");
-    // 注意：实际生产环境中请谨慎执行，这里仅作演示
-    // const signature = await executeVersionedTransaction(connection, versionedTx, fromWallet);
+    console.log("✅ 版本化交易构建:");
   } catch (error) {
     console.error("\n❌ 操作失败:", error.message || error);
     if (error.response?.data) {
